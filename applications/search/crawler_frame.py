@@ -4,11 +4,22 @@ from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
 from lxml import html,etree
 import re, os
-from time import time
+import time
 from uuid import uuid4
 
-from urlparse import urlparse, parse_qs
+from urlparse import urlparse, parse_qs, urljoin
 from uuid import uuid4
+
+from bs4 import BeautifulSoup as bs
+import re, operator
+
+#--------------------------------
+visited_links = set()
+subDomains_visited = dict()
+max_links_page = {}
+bad_links = set()
+total_links_processed = 100
+#---------------------------------
 
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
@@ -40,20 +51,68 @@ class CrawlerFrame(IApplication):
             self.download_links(unprocessed_links)
 
     def download_links(self, unprocessed_links):
+        global subDomains_visited, visited_links, total_links_processed
         for link in unprocessed_links:
             print "Got a link to download:", link.full_url
             downloaded = link.download()
+            visited_links.add(link.full_url)  # added code
             links = extract_next_links(downloaded)
+            validlink = 0 #added variable
             for l in links:
                 if is_valid(l):
+                    #added code
+                    validlink += 1
+                    suburl = urlparse(l)
+                    domains = suburl.hostname
+                    if domains not in subDomains_visited:
+                        subDomains_visited[domains] = 1
+                    else:
+                        subDomains_visited[domains] += 1
+                    #end added code
                     self.frame.add(Vuqt1Hoangt5MalayaLink(l))
+            #added code
+            max_links_page[link.full_url] = validlink
+            if(len(visited_links) > total_links_processed):
+                self.analytic()
+                print("--------------------!!! Crawler stopped !!!--------------------")
+                raise KeyboardInterrupt
+            #added code end
 
     def shutdown(self):
-        print (
+        print(
             "Time time spent this session: ",
             time() - self.starttime, " seconds.")
-    
+
+    def analytic(self):
+        # All coded are added
+        # Create Analytic text file
+        output_file = open("Analytics.txt", "w")
+        output_file.write("Team 55 - Analytic:\n")
+        output_file.write("***************************************************************\n")
+
+        list_of_max_links = sorted(max_links_page.items(), key=operator.itemgetter(1), reverse=True)
+        output_file.write("\nPage have the most outlinks: " + list_of_max_links[0][0] + "\n")
+        output_file.write("Total: " + str(list_of_max_links[0][1]) + "\n")
+        output_file.write("\n***************************************************************\n")
+        for key, value in sorted(subDomains_visited.items()):
+            output_file.write("Subdomain: " + key + "\n")
+            output_file.write("Subdomain URLS: " + str(value) + "\n\n")
+        output_file.close()
+
+        # Create a text file with all BAD links
+        output_file1 = open("bad_link.txt", "w")
+        output_file1.write("LIST OF THE BAD LINKS: \n")
+        output_file1.write("***************************************************************\n")
+        for item in bad_links:
+            output_file1.write(item + "\n")
+        output_file1.close()
+
 def extract_next_links(rawDataObj):
+    global subDomains_visited  # dict
+    global max_links_page  # dict
+    global bad_links  # set
+    global visited_links  # set
+
     outputLinks = []
     '''
     rawDataObj is an object of type UrlResponse declared at L20-30
@@ -65,7 +124,38 @@ def extract_next_links(rawDataObj):
     
     Suggested library: lxml
     '''
+    if (rawDataObj.is_redirected):  # Checks if url has redirected
+        url = rawDataObj.final_url
+        outputLinks.append(rawDataObj.final_url.encode('utf-8'))
+    else:
+        url = rawDataObj.url
+
+    soup = bs(rawDataObj.content, 'html.parser')  # ? feature
+    rootLink = str(rawDataObj.url)
+    for link in soup.find_all('a'):
+        pattern = str(link.get('href'))
+        #print "origin pattern: " + pattern
+        if (re.compile('^http')).match(pattern):
+            outputLinks.append(pattern)
+        elif (re.compile('^//')).match(pattern):
+            outputLinks.append(urljoin(rootLink, pattern, True))
+        elif (re.compile("^/")).match(pattern):
+            outputLinks.append(urljoin(rootLink, pattern, True))    
+
     return outputLinks
+    '''
+    if (rawDataObj.http_code > 399):  # Contains error code
+        return outputLinks
+
+    soup = bs(rawDataObj.content.decode('utf-8'), 'lxml')
+
+    for tagObj in soup.find_all('a'):
+        if (tagObj.attrs.has_key('href')):
+            # print(tagObj['href'].encode('utf-8'))
+            outputLinks.append(urljoin(url.decode('utf-8'), tagObj['href']).encode('utf-8'))
+
+    return outputLinks
+    '''
 
 def is_valid(url):
     '''
@@ -74,18 +164,57 @@ def is_valid(url):
     Robot rules and duplication rules are checked separately.
     This is a great place to filter out crawler traps.
     '''
-    parsed = urlparse(url)
-    if parsed.scheme not in set(["http", "https"]):
+    global subDomains_visited  # dict
+    global max_links_page  # Tuple
+    global bad_links  # sets
+    global visited_links  # sets
+
+    if url in visited_links:
         return False
+    elif len(url) > 100:
+        bad_links.add(url)
+        return False
+
+    # parse url string to url object
+    parsed = urlparse(url)
+
+    if parsed.scheme not in set(["http", "https"]):
+        bad_links.add(url)
+        return False
+
+    # look for calendar in path (trap)
+    elif re.search(r'^.*calendar.*$', parsed.path):
+        if parsed.query:
+            bad_links.add(url)
+            return False
+
+    # another trap
+    elif parsed.netloc == "calendar.ics.uci.edu":
+        bad_links.add(url)
+        return False
+
+    # regx for Repeating Directories:
+    elif re.search(r'^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$', parsed.path):
+        bad_links.add(url)
+        return False
+
     try:
-        return ".ics.uci.edu" in parsed.hostname \
-            and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4"\
-            + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
-            + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
-            + "|thmx|mso|arff|rtf|jar|csv"\
-            + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower())
+        if ".ics.uci.edu" in parsed.hostname and not re.match(
+                ".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
+                + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
+                + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
+                + "|thmx|mso|arff|rtf|jar|csv" \
+                + "|rm|smil|wmv|swf|wma|zip|rar|gz|pdf)$", parsed.path.lower()):
+            visited_links.add(url)
+            return True
+        else:
+            bad_links.add(url)
+            return False
 
     except TypeError:
-        print ("TypeError for ", parsed)
+        print("TypeError for ", parsed)
         return False
+
+    finally:
+        bad_links.add(url)
 
