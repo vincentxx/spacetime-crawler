@@ -18,7 +18,7 @@ visited_links = set()
 subDomains_visited = dict()
 max_links_page = {}
 bad_links = set()
-total_links_processed = 100
+total_links_processed = 3000
 #---------------------------------
 
 logger = logging.getLogger(__name__)
