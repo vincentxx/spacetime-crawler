@@ -184,9 +184,8 @@ def is_valid(url):
 
     # look for calendar in path (trap)
     elif re.search(r'^.*calendar.*$', parsed.path):
-        if parsed.query:
-            bad_links.add(url)
-            return False
+        bad_links.add(url)
+        return False
 
     # another trap
     elif parsed.netloc == "calendar.ics.uci.edu":
