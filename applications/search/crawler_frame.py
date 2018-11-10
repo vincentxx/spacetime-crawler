@@ -13,12 +13,12 @@ from uuid import uuid4
 from bs4 import BeautifulSoup as bs
 import re, operator
 
-#--------------------------------
+#-------------------------------- Simple Database
 visited_links = set()
 subDomains_visited = dict()
 max_links_page = {}
 bad_links = set()
-total_links_processed = 3000
+total_links_processed = 5000
 #---------------------------------
 
 logger = logging.getLogger(__name__)
@@ -133,29 +133,21 @@ def extract_next_links(rawDataObj):
     soup = bs(rawDataObj.content, 'html.parser')  # ? feature
     rootLink = str(rawDataObj.url)
     for link in soup.find_all('a'):
-        pattern = str(link.get('href'))
-        #print "origin pattern: " + pattern
-        if (re.compile('^http')).match(pattern):
-            outputLinks.append(pattern)
-        elif (re.compile('^//')).match(pattern):
-            outputLinks.append(urljoin(rootLink, pattern, True))
-        elif (re.compile("^/")).match(pattern):
-            outputLinks.append(urljoin(rootLink, pattern, True))    
+        try:
+            pattern = str(link.get('href'))  #Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
+            if (re.compile('^http')).match(pattern):
+                outputLinks.append(pattern)
+            elif (re.compile('^//')).match(pattern):
+                outputLinks.append(urljoin(rootLink, pattern, True))
+            elif (re.compile("^/")).match(pattern):
+                outputLinks.append(urljoin(rootLink, pattern, True))
+        except:
+            #print 'link contains invalid characters'
+            bad_links.add(link.get('href'))
+            continue
 
     return outputLinks
-    '''
-    if (rawDataObj.http_code > 399):  # Contains error code
-        return outputLinks
 
-    soup = bs(rawDataObj.content.decode('utf-8'), 'lxml')
-
-    for tagObj in soup.find_all('a'):
-        if (tagObj.attrs.has_key('href')):
-            # print(tagObj['href'].encode('utf-8'))
-            outputLinks.append(urljoin(url.decode('utf-8'), tagObj['href']).encode('utf-8'))
-
-    return outputLinks
-    '''
 
 def is_valid(url):
     '''
@@ -177,6 +169,7 @@ def is_valid(url):
 
     # parse url string to url object
     parsed = urlparse(url)
+    #print url
 
     if parsed.scheme not in set(["http", "https"]):
         bad_links.add(url)
@@ -188,7 +181,8 @@ def is_valid(url):
         return False
 
     # another trap
-    elif parsed.netloc == "calendar.ics.uci.edu":
+    elif (re.compile("calendar", re.IGNORECASE)).match(str(url)):
+        print "BAD URL " + url
         bad_links.add(url)
         return False
 
