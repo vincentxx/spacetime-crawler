@@ -1,0 +1,22 @@
+Team 55 - Analytic:
+***************************************************************
+
+Page have the most outlinks: http://www.ics.uci.edu
+Total: 66
+
+***************************************************************
+Subdomain: calendar.ics.uci.edu
+Subdomain URLS: 1
+
+Subdomain: intranet.ics.uci.edu
+Subdomain URLS: 1
+
+Subdomain: mhcid.ics.uci.edu
+Subdomain URLS: 1
+
+Subdomain: mse.ics.uci.edu
+Subdomain URLS: 1
+
+Subdomain: www.ics.uci.edu
+Subdomain URLS: 126
+

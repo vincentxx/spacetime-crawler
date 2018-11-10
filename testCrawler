@@ -1,0 +1,3 @@
+python applications/search/reset_frontier.py -a amazon.ics.uci.edu -p 9100
+sleep 5
+python applications/search/crawler.py -a amazon.ics.uci.edu -p 9100
