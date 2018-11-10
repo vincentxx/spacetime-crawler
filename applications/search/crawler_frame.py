@@ -10,7 +10,7 @@ from uuid import uuid4
 from urlparse import urlparse, parse_qs, urljoin
 from uuid import uuid4
 
-from bs4 import BeautifulSoup as bs
+from bs4 import BeautifulSoup as bs , SoupStrainer
 import re, operator
 
 #--------------------------------
@@ -130,30 +130,27 @@ def extract_next_links(rawDataObj):
     else:
         url = rawDataObj.url
 
-    soup = bs(rawDataObj.content, 'html.parser')  # ? feature
+    soup = bs(rawDataObj.content, parse_only=SoupStrainer('a'))  # ? feature
     rootLink = str(rawDataObj.url)
     for link in soup.find_all('a'):
-        pattern = str(link.get('href'))
-        #print "origin pattern: " + pattern
-        if (re.compile('^http')).match(pattern):
-            outputLinks.append(pattern)
-        elif (re.compile('^//')).match(pattern):
-            outputLinks.append(urljoin(rootLink, pattern, True))
-        elif (re.compile("^/")).match(pattern):
-            outputLinks.append(urljoin(rootLink, pattern, True))    
+            pattern = str(link.get('href'))
+            #print "origin pattern: " + pattern
+            if (re.compile('^http')).match(pattern):
+                outputLinks.append(pattern)
+            elif (re.compile('^//')).match(pattern):
+                outputLinks.append(urljoin(rootLink, pattern, True))
+            elif (re.compile("^/")).match(pattern):
+                outputLinks.append(urljoin(rootLink, pattern, True))    
 
     return outputLinks
     '''
     if (rawDataObj.http_code > 399):  # Contains error code
         return outputLinks
-
     soup = bs(rawDataObj.content.decode('utf-8'), 'lxml')
-
     for tagObj in soup.find_all('a'):
         if (tagObj.attrs.has_key('href')):
             # print(tagObj['href'].encode('utf-8'))
             outputLinks.append(urljoin(url.decode('utf-8'), tagObj['href']).encode('utf-8'))
-
     return outputLinks
     '''
 
@@ -184,12 +181,11 @@ def is_valid(url):
 
     # look for calendar in path (trap)
     elif re.search(r'^.*calendar.*$', parsed.path):
-        if parsed.query:
-            bad_links.add(url)
-            return False
+        bad_links.add(url)
+        return False
 
     # another trap
-    elif parsed.netloc == "calendar.ics.uci.edu":
+    elif re.search(r'^.*ganglia.*$', parsed.path):
         bad_links.add(url)
         return False
 
@@ -217,4 +213,3 @@ def is_valid(url):
 
     finally:
         bad_links.add(url)
-
