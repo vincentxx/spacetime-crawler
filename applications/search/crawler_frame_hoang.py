@@ -173,7 +173,7 @@ def extract_next_links(rawDataObj):
 
     return outputLinks
 
-
+#Refer to this website: https://support.archive-it.org/hc/en-us/articles/208332943-Identify-and-avoid-crawler-traps-
 def is_valid(url):
     '''
     Function returns True or False based on whether the url has to be
