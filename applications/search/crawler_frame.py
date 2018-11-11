@@ -124,17 +124,30 @@ def extract_next_links(rawDataObj):
     
     Suggested library: lxml
     '''
-    if (rawDataObj.is_redirected):  # Checks if url has redirected
+    # Skip if the page has error response such as 404, return empty
+    if (rawDataObj.http_code > 399):
+        bad_links.add(rawDataObj.url)
+        return outputLinks
+
+    # Checks if url has redirected, if yes then use the final link as root link
+    if (rawDataObj.is_redirected):
         url = rawDataObj.final_url
         outputLinks.append(rawDataObj.final_url.encode('utf-8'))
     else:
         url = rawDataObj.url
 
-    soup = bs(rawDataObj.content, 'html.parser')  # ? feature
-    rootLink = str(rawDataObj.url)
+    # If frontier returned a link which is not able to convert to utf-8
+    try:
+        soup = bs(rawDataObj.content, 'html.parser')  # ? feature
+        rootLink = str(url)
+    except:
+        bad_links.add(rawDataObj.url)
+        return outputLinks
+
+    # Extract links from the content
     for link in soup.find_all('a'):
         try:
-            pattern = str(link.get('href'))  #Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
+            pattern = str(link.get('href'))  # Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
             if (re.compile('^http')).match(pattern):
                 outputLinks.append(pattern)
             elif (re.compile('^//')).match(pattern):
@@ -142,7 +155,6 @@ def extract_next_links(rawDataObj):
             elif (re.compile("^/")).match(pattern):
                 outputLinks.append(urljoin(rootLink, pattern, True))
         except:
-            #print 'link contains invalid characters'
             bad_links.add(link.get('href'))
             continue
 
