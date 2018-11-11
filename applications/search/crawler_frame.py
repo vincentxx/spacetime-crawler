@@ -10,8 +10,9 @@ from uuid import uuid4
 from urlparse import urlparse, parse_qs, urljoin
 from uuid import uuid4
 
+from bs4 import SoupStrainer 
 from bs4 import BeautifulSoup as bs
-import re, operator
+import operator
 
 #-------------------------------- Simple Database
 visited_links = set()
@@ -107,6 +108,9 @@ class CrawlerFrame(IApplication):
             output_file1.write(item + "\n")
         output_file1.close()
 
+
+
+
 def extract_next_links(rawDataObj):
     global subDomains_visited  # dict
     global max_links_page  # dict
@@ -126,11 +130,17 @@ def extract_next_links(rawDataObj):
     '''
     if (rawDataObj.is_redirected):  # Checks if url has redirected
         url = rawDataObj.final_url
-        outputLinks.append(rawDataObj.final_url.encode('utf-8'))
+        try:
+            outputLinks.append(rawDataObj.final_url.encode('utf-8'))
+        except:
+             bad_links.add(rawDataObj.final_url)
+
     else:
         url = rawDataObj.url
+    if (rawDataObj.http_code > 399): 
+        return outputLinks
 
-    soup = bs(rawDataObj.content, 'html.parser')  # ? feature
+    soup = bs(rawDataObj.content, parse_only=SoupStrainer('a'))  # ? feature
     rootLink = str(rawDataObj.url)
     for link in soup.find_all('a'):
         try:
@@ -147,7 +157,6 @@ def extract_next_links(rawDataObj):
             continue
 
     return outputLinks
-
 
 def is_valid(url):
     '''
@@ -181,8 +190,7 @@ def is_valid(url):
         return False
 
     # another trap
-    elif (re.compile("calendar", re.IGNORECASE)).match(str(url)):
-        print "BAD URL " + url
+    elif re.search(r'^.*ganglia.*$', parsed.path):
         bad_links.add(url)
         return False
 
@@ -210,4 +218,3 @@ def is_valid(url):
 
     finally:
         bad_links.add(url)
-
