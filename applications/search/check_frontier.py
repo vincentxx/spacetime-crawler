@@ -7,7 +7,7 @@ import uuid
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from datamodel.search.Malaya_datamodel import MalayaLink
+from datamodel.search.Vuqt1Hoangt5Malaya_datamodel import Vuqt1Hoangt5MalayaLink
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Deleter, Getter
 from spacetime.connectors.spacetime import ObjectlessSpacetimeConnection
@@ -18,11 +18,11 @@ from applications.search.crawler_frame import CrawlerFrame
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CHECKFRONTIER]"
 
-@Getter(MalayaLink)
+@Getter(Vuqt1Hoangt5MalayaLink)
 class CheckFrontierFrame(IApplication):
 
     def __init__(self, frame):
-        self.app_id = "Malaya"
+        self.app_id = "Vuqt1Hoangt5Malaya"
         self.frame = frame
 
 
@@ -30,7 +30,7 @@ class CheckFrontierFrame(IApplication):
         pass
 
     def update(self):
-        ls = self.frame.get(MalayaLink)
+        ls = self.frame.get(Vuqt1Hoangt5MalayaLink)
         with open("frontier_summary.txt", "w") as f:
             f.write("url\tdownload_complete\n")
             for l in ls:
@@ -55,7 +55,7 @@ class Simulation(object):
         Constructor
         '''
         objectless_connector = ObjectlessSpacetimeConnection(
-            "CheckFrontier_Malaya".format(CrawlerFrame.app_id),
+            "CheckFrontier_Vuqt1Hoangt5Malaya".format(CrawlerFrame.app_id),
             address = "http://" + address + ":" + str(port) + "/")
         frame_c = ClientFrame(
             objectless_connector,
