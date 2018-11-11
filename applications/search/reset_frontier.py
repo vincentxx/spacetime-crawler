@@ -7,7 +7,7 @@ import uuid
 
 sys.path.append(os.path.realpath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from datamodel.search.Malaya_datamodel import MalayaLink
+from datamodel.search.Vuqt1Hoangt5Malaya_datamodel import Vuqt1Hoangt5MalayaLink
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Deleter, Getter
 from spacetime.connectors.spacetime import ObjectlessSpacetimeConnection
@@ -18,12 +18,12 @@ from applications.search.crawler_frame import CrawlerFrame
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[DELETEFRONTIER]"
 
-@Deleter(MalayaLink)
-@Getter(MalayaLink)
+@Deleter(Vuqt1Hoangt5MalayaLink)
+@Getter(Vuqt1Hoangt5MalayaLink)
 class DeleteFrontierFrame(IApplication):
 
     def __init__(self, frame):
-        self.app_id = "Malaya"
+        self.app_id = "Vuqt1Hoangt5Malaya"
         self.frame = frame
 
 
@@ -32,10 +32,10 @@ class DeleteFrontierFrame(IApplication):
 
     def update(self):
         print "Deleting links. This might take a while."
-        ls = self.frame.get(MalayaLink)
+        ls = self.frame.get(Vuqt1Hoangt5MalayaLink)
         print "Found ", len(ls), " links to delete."
         for l in ls:
-            self.frame.delete(MalayaLink, l)
+            self.frame.delete(Vuqt1Hoangt5MalayaLink, l)
 
         self.done = True
 
@@ -53,7 +53,7 @@ class Simulation(object):
         Constructor
         '''
         objectless_connector = ObjectlessSpacetimeConnection(
-            "ResetFrontier_Malaya".format(CrawlerFrame.app_id),
+            "ResetFrontier_Vuqt1Hoangt5Malaya".format(CrawlerFrame.app_id),
             address = "http://" + address + ":" + str(port) + "/")
         frame_c = ClientFrame(
             objectless_connector,
