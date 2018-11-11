@@ -2,7 +2,7 @@ import logging
 from datamodel.search.Vuqt1Hoangt5Malaya_datamodel import Vuqt1Hoangt5MalayaLink, OneVuqt1Hoangt5MalayaUnProcessedLink
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
-from lxml import html,etree
+from lxml import html, etree
 import re, os
 import time
 from uuid import uuid4
@@ -13,16 +13,18 @@ from uuid import uuid4
 from bs4 import BeautifulSoup as bs
 import re, operator
 
-#-------------------------------- Simple Database
+# -------------------------------- Simple Database
 visited_links = set()
 subDomains_visited = dict()
 max_links_page = {}
 bad_links = set()
 total_links_processed = 5000
-#---------------------------------
+crawler_traps = set()
+# ---------------------------------
 
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
+
 
 @Producer(Vuqt1Hoangt5MalayaLink)
 @GetterSetter(OneVuqt1Hoangt5MalayaUnProcessedLink)
@@ -33,16 +35,17 @@ class CrawlerFrame(IApplication):
         self.app_id = "Vuqt1Hoangt5Malaya"
         self.frame = frame
 
-
     def initialize(self):
         self.count = 0
         links = self.frame.get_new(OneVuqt1Hoangt5MalayaUnProcessedLink)
         if len(links) > 0:
-            print "Resuming from the previous state."
+            print
+            "Resuming from the previous state."
             self.download_links(links)
         else:
             l = Vuqt1Hoangt5MalayaLink("http://www.ics.uci.edu/")
-            print l.full_url
+            print
+            l.full_url
             self.frame.add(l)
 
     def update(self):
@@ -53,14 +56,15 @@ class CrawlerFrame(IApplication):
     def download_links(self, unprocessed_links):
         global subDomains_visited, visited_links, total_links_processed
         for link in unprocessed_links:
-            print "Got a link to download:", link.full_url
+            print
+            "Got a link to download:", link.full_url
             downloaded = link.download()
             visited_links.add(link.full_url)  # added code
             links = extract_next_links(downloaded)
-            validlink = 0 #added variable
+            validlink = 0  # added variable
             for l in links:
                 if is_valid(l):
-                    #added code
+                    # added code
                     validlink += 1
                     suburl = urlparse(l)
                     domains = suburl.hostname
@@ -68,15 +72,15 @@ class CrawlerFrame(IApplication):
                         subDomains_visited[domains] = 1
                     else:
                         subDomains_visited[domains] += 1
-                    #end added code
+                    # end added code
                     self.frame.add(Vuqt1Hoangt5MalayaLink(l))
-            #added code
+            # added code
             max_links_page[link.full_url] = validlink
-            if(len(visited_links) > total_links_processed):
+            if (len(visited_links) > total_links_processed):
                 self.analytic()
                 print("--------------------!!! Crawler stopped !!!--------------------")
                 raise KeyboardInterrupt
-            #added code end
+            # added code end
 
     def shutdown(self):
         print(
@@ -107,6 +111,14 @@ class CrawlerFrame(IApplication):
             output_file1.write(item + "\n")
         output_file1.close()
 
+        # Create a text file with Crawler Traps:
+        output_file2 = open("crawler_traps_links.txt", "w")
+        output_file2.write("LIST OF THE CRAWLER TRAP LINKS: \n")
+        output_file2.write("***************************************************************\n")
+        for item in crawler_traps:
+            output_file2.write(item + "\n")
+        output_file2.close()
+
 def extract_next_links(rawDataObj):
     global subDomains_visited  # dict
     global max_links_page  # dict
@@ -121,7 +133,7 @@ def extract_next_links(rawDataObj):
     Validation of link via is_valid function is done later (see line 42).
     It is not required to remove duplicates that have already been downloaded. 
     The frontier takes care of that.
-    
+
     Suggested library: lxml
     '''
     # Skip if the page has error response such as 404, return empty
@@ -147,7 +159,8 @@ def extract_next_links(rawDataObj):
     # Extract links from the content
     for link in soup.find_all('a'):
         try:
-            pattern = str(link.get('href'))  # Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
+            pattern = str(link.get(
+                'href'))  # Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
             if (re.compile('^http')).match(pattern):
                 outputLinks.append(pattern)
             elif (re.compile('^//')).match(pattern):
@@ -160,7 +173,7 @@ def extract_next_links(rawDataObj):
 
     return outputLinks
 
-
+#Refer to this website: https://support.archive-it.org/hc/en-us/articles/208332943-Identify-and-avoid-crawler-traps-
 def is_valid(url):
     '''
     Function returns True or False based on whether the url has to be
@@ -168,20 +181,19 @@ def is_valid(url):
     Robot rules and duplication rules are checked separately.
     This is a great place to filter out crawler traps.
     '''
-    global subDomains_visited  # dict
-    global max_links_page  # Tuple
     global bad_links  # sets
     global visited_links  # sets
+    global crawler_traps  # sets
 
     if url in visited_links:
         return False
     elif len(url) > 100:
-        bad_links.add(url)
+        crawler_traps.add(url)
         return False
 
     # parse url string to url object
     parsed = urlparse(url)
-    #print url
+    # print url
 
     if parsed.scheme not in set(["http", "https"]):
         bad_links.add(url)
@@ -189,17 +201,17 @@ def is_valid(url):
 
     # look for calendar in path (trap)
     elif re.search(r'^.*calendar.*$', parsed.path):
-        bad_links.add(url)
+        crawler_traps.add(url)
         return False
 
     # another trap
     elif re.search(r'^.*ganglia.*$', parsed.path):
-        bad_links.add(url)
+        crawler_traps.add(url)
         return False
 
     # regx for Repeating Directories:
     elif re.search(r'^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$', parsed.path):
-        bad_links.add(url)
+        crawler_traps.add(url)
         return False
 
     try:
@@ -212,7 +224,7 @@ def is_valid(url):
             visited_links.add(url)
             return True
         else:
-            bad_links.add(url)
+            crawler_traps.add(url)
             return False
 
     except TypeError:
