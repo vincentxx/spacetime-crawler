@@ -128,28 +128,19 @@ def extract_next_links(rawDataObj):
     rootLink = str(rawDataObj.url)
     for link in soup.find_all('a'):
         try:
-            pattern = str(link.get('href'))
-            #print "origin pattern: " + pattern
+            pattern = str(link.get('href'))  #Throws exception if converting to UTF-8 is out of range: link.get() return unicode obj
             if (re.compile('^http')).match(pattern):
                 outputLinks.append(pattern)
             elif (re.compile('^//')).match(pattern):
                 outputLinks.append(urljoin(rootLink, pattern, True))
             elif (re.compile("^/")).match(pattern):
-                outputLinks.append(urljoin(rootLink, pattern, True))    
+                outputLinks.append(urljoin(rootLink, pattern, True))
         except:
-             bad_links.add(link.get('href'))
-             continue
+            #print 'link contains invalid characters'
+            bad_links.add(link.get('href'))
+            continue
+
     return outputLinks
-    '''
-    if (rawDataObj.http_code > 399):  # Contains error code
-        return outputLinks
-    soup = bs(rawDataObj.content.decode('utf-8'), 'lxml')
-    for tagObj in soup.find_all('a'):
-        if (tagObj.attrs.has_key('href')):
-            # print(tagObj['href'].encode('utf-8'))
-            outputLinks.append(urljoin(url.decode('utf-8'), tagObj['href']).encode('utf-8'))
-    return outputLinks
-    '''
 
 def is_valid(url):
     '''
@@ -171,6 +162,7 @@ def is_valid(url):
 
     # parse url string to url object
     parsed = urlparse(url)
+    #print url
 
     if parsed.scheme not in set(["http", "https"]):
         bad_links.add(url)
