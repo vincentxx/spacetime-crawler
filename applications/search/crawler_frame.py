@@ -1,112 +1,100 @@
 import logging
-from datamodel.search.Vuqt1Hoangt5Malaya_datamodel import Vuqt1Hoangt5MalayaLink, OneVuqt1Hoangt5MalayaUnProcessedLink
+from datamodel.search.Malaya_datamodel import MalayaLink, OneMalayaUnProcessedLink
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
 from lxml import html,etree
 import re, os
-import time
+from time import time
 from uuid import uuid4
 
+from bs4 import SoupStrainer 
 from urlparse import urlparse, parse_qs, urljoin
 from uuid import uuid4
 
-from bs4 import BeautifulSoup as bs , SoupStrainer
+from bs4 import BeautifulSoup as bs
 import re, operator
 
-#--------------------------------
+#-------------------------------- Simple Database
 visited_links = set()
 subDomains_visited = dict()
 max_links_page = {}
 bad_links = set()
-total_links_processed = 3000
+total_links_processed = 5000
 #---------------------------------
 
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
 
-@Producer(Vuqt1Hoangt5MalayaLink)
-@GetterSetter(OneVuqt1Hoangt5MalayaUnProcessedLink)
+@Producer(MalayaLink)
+@GetterSetter(OneMalayaUnProcessedLink)
 class CrawlerFrame(IApplication):
-    app_id = "Vuqt1Hoangt5Malaya"
+    app_id = "Malaya"
 
     def __init__(self, frame):
-        self.app_id = "Vuqt1Hoangt5Malaya"
+        self.app_id = "Malaya"
         self.frame = frame
 
 
     def initialize(self):
         self.count = 0
-        links = self.frame.get_new(OneVuqt1Hoangt5MalayaUnProcessedLink)
+        links = self.frame.get_new(OneMalayaUnProcessedLink)
         if len(links) > 0:
             print "Resuming from the previous state."
             self.download_links(links)
         else:
-            l = Vuqt1Hoangt5MalayaLink("http://www.ics.uci.edu/")
+            l = MalayaLink("http://www.ics.uci.edu/")
             print l.full_url
             self.frame.add(l)
 
     def update(self):
-        unprocessed_links = self.frame.get_new(OneVuqt1Hoangt5MalayaUnProcessedLink)
+        unprocessed_links = self.frame.get_new(OneMalayaUnProcessedLink)
         if unprocessed_links:
             self.download_links(unprocessed_links)
 
     def download_links(self, unprocessed_links):
-        global subDomains_visited, visited_links, total_links_processed
+
         for link in unprocessed_links:
             print "Got a link to download:", link.full_url
             downloaded = link.download()
-            visited_links.add(link.full_url)  # added code
             links = extract_next_links(downloaded)
-            validlink = 0 #added variable
             for l in links:
                 if is_valid(l):
-                    #added code
-                    validlink += 1
-                    suburl = urlparse(l)
-                    domains = suburl.hostname
-                    if domains not in subDomains_visited:
-                        subDomains_visited[domains] = 1
-                    else:
-                        subDomains_visited[domains] += 1
-                    #end added code
-                    self.frame.add(Vuqt1Hoangt5MalayaLink(l))
-            #added code
-            max_links_page[link.full_url] = validlink
-            if(len(visited_links) > total_links_processed):
-                self.analytic()
-                print("--------------------!!! Crawler stopped !!!--------------------")
-                raise KeyboardInterrupt
-            #added code end
+                    self.frame.add(MalayaLink(l))
 
     def shutdown(self):
-        print(
+        print (
             "Time time spent this session: ",
             time() - self.starttime, " seconds.")
-
+    
     def analytic(self):
-        # All coded are added
-        # Create Analytic text file
-        output_file = open("Analytics.txt", "w")
-        output_file.write("Team 55 - Analytic:\n")
-        output_file.write("***************************************************************\n")
+            # All coded are added
+            # Create Analytic text file
+            output_file = open("Analytics.txt", "w")
+            output_file.write("Team 55 - Analytic:\n")
+            output_file.write("***************************************************************\n")
 
-        list_of_max_links = sorted(max_links_page.items(), key=operator.itemgetter(1), reverse=True)
-        output_file.write("\nPage have the most outlinks: " + list_of_max_links[0][0] + "\n")
-        output_file.write("Total: " + str(list_of_max_links[0][1]) + "\n")
-        output_file.write("\n***************************************************************\n")
-        for key, value in sorted(subDomains_visited.items()):
-            output_file.write("Subdomain: " + key + "\n")
-            output_file.write("Subdomain URLS: " + str(value) + "\n\n")
-        output_file.close()
+            list_of_max_links = sorted(max_links_page.items(), key=operator.itemgetter(1), reverse=True)
+            output_file.write("\nPage have the most outlinks: " + list_of_max_links[0][0] + "\n")
+            output_file.write("Total: " + str(list_of_max_links[0][1]) + "\n")
+            output_file.write("\n***************************************************************\n")
+            for key, value in sorted(subDomains_visited.items()):
+                output_file.write("Subdomain: " + key + "\n")
+                output_file.write("Subdomain URLS: " + str(value) + "\n\n")
+            output_file.close()
 
-        # Create a text file with all BAD links
-        output_file1 = open("bad_link.txt", "w")
-        output_file1.write("LIST OF THE BAD LINKS: \n")
-        output_file1.write("***************************************************************\n")
-        for item in bad_links:
-            output_file1.write(item + "\n")
-        output_file1.close()
+            # Create a text file with all BAD links
+            output_file1 = open("bad_link.txt", "w")
+            output_file1.write("LIST OF THE BAD LINKS: \n")
+            output_file1.write("***************************************************************\n")
+            for item in bad_links:
+                output_file1.write(item + "\n")
+            output_file1.close()
 
+    def shutdown(self):
+        print (
+            "Time time spent this session: ",
+            time() - self.starttime, " seconds.")
+    
 def extract_next_links(rawDataObj):
     global subDomains_visited  # dict
     global max_links_page  # dict
@@ -126,13 +114,20 @@ def extract_next_links(rawDataObj):
     '''
     if (rawDataObj.is_redirected):  # Checks if url has redirected
         url = rawDataObj.final_url
-        outputLinks.append(rawDataObj.final_url.encode('utf-8'))
+        try:
+            outputLinks.append(rawDataObj.final_url.encode('utf-8'))
+        except:
+             bad_links.add(rawDataObj.final_url)
+
     else:
         url = rawDataObj.url
+    if (rawDataObj.http_code > 399): 
+        return outputLinks
 
     soup = bs(rawDataObj.content, parse_only=SoupStrainer('a'))  # ? feature
     rootLink = str(rawDataObj.url)
     for link in soup.find_all('a'):
+        try:
             pattern = str(link.get('href'))
             #print "origin pattern: " + pattern
             if (re.compile('^http')).match(pattern):
@@ -141,7 +136,9 @@ def extract_next_links(rawDataObj):
                 outputLinks.append(urljoin(rootLink, pattern, True))
             elif (re.compile("^/")).match(pattern):
                 outputLinks.append(urljoin(rootLink, pattern, True))    
-
+        except:
+             bad_links.add(link.get('href'))
+             continue
     return outputLinks
     '''
     if (rawDataObj.http_code > 399):  # Contains error code
@@ -213,3 +210,4 @@ def is_valid(url):
 
     finally:
         bad_links.add(url)
+
