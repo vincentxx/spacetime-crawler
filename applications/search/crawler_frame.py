@@ -193,8 +193,7 @@ def is_valid(url):
         return False
 
     # another trap
-    elif (re.compile("calendar", re.IGNORECASE)).match(str(url)):
-        print "BAD URL " + url
+    elif re.search(r'^.*ganglia.*$', parsed.path):
         bad_links.add(url)
         return False
 
