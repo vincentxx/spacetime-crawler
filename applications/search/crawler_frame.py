@@ -18,7 +18,7 @@ visited_links = set()
 subDomains_visited = dict()
 max_links_page = {}
 bad_links = set()
-total_links_processed = 5000
+total_links_processed = 3000
 crawler_traps = set()
 # ---------------------------------
 
@@ -153,7 +153,7 @@ def extract_next_links(rawDataObj):
         soup = bs(rawDataObj.content, 'html.parser')  # ? feature
         rootLink = str(url)
     except:
-        bad_links.add(rawDataObj.url)
+        #bad_links.add(rawDataObj.url)
         return outputLinks
 
     # Extract links from the content
@@ -168,7 +168,7 @@ def extract_next_links(rawDataObj):
             elif (re.compile("^/")).match(pattern):
                 outputLinks.append(urljoin(rootLink, pattern, True))
         except:
-            bad_links.add(link.get('href'))
+            #bad_links.add(link.get('href'))
             continue
 
     return outputLinks
